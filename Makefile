@@ -11,6 +11,9 @@ develop: $(MATURIN)
 	$(MATURIN) develop
 	$(PYTHON_BIN) shell.py
 
+build: $(MATURIN)
+	$(MATURIN) develop
+
 
 $(VENV_DIR):
 	$(SYSTEM_PYTHON) -m venv $(VENV_DIR)

@@ -1,8 +1,5 @@
-use pyo3::create_exception;
-use pyo3::exceptions::PyException;
 use pyo3::exceptions::PyOSError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyString};
 use rust_device_detector::device_detector::{Detection, DeviceDetector};
 use std::fmt;
 
@@ -47,12 +44,12 @@ impl PyDeviceDetector {
         }
     }
 
+    #[pyo3(signature = (ua, headers=None))]
     fn parse(&self, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<String> {
-        println!("{:?}", self.dd.parse(ua, None));
         match self.dd.parse(ua, headers) {
-            Ok(Detection::Bot(bot)) => Ok("Bot".to_string()),
-            Ok(Detection::Known(device)) => Ok("Device".to_string()),
-            Err(error) => Err(PyErr::from(MyError {
+            Ok(Detection::Bot(_bot)) => Ok("Bot".to_string()),
+            Ok(Detection::Known(_device)) => Ok("Device".to_string()),
+            Err(_error) => Err(PyErr::from(MyError {
                 msg: "number is less than or equal to 2",
             })),
         }
@@ -61,10 +58,9 @@ impl PyDeviceDetector {
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
-fn parse(py: Python, ua: &str) -> PyResult<String> {
-    let detector = DeviceDetector::new_with_cache(128);
-    let result = detector.parse(ua, None);
-    Ok("Testing".to_string())
+#[pyo3(signature = (ua, headers=None))]
+fn parse(_py: Python, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<String> {
+    PyDeviceDetector::new(0).parse(ua, headers)
 }
 
 /// A Python module implemented in Rust.
