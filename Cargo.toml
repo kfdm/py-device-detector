@@ -9,4 +9,5 @@ name = "py_device_detector"
 crate-type = ["cdylib"]
 
 [dependencies]
+rust-device-detector = { git = "https://github.com/simplecastapps/rust-device-detector.git", branch = "main", features = ["cache"]}
 pyo3 = "0.22.0"
