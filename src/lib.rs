@@ -1,24 +1,5 @@
-use pyo3::exceptions::PyOSError;
 use pyo3::prelude::*;
 use rust_device_detector::device_detector::{Detection, DeviceDetector};
-use std::fmt;
-
-#[derive(Debug)]
-struct MyError {
-    pub msg: &'static str,
-}
-
-impl std::error::Error for MyError {}
-impl fmt::Display for MyError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Error from Rust: {}", self.msg)
-    }
-}
-impl std::convert::From<MyError> for PyErr {
-    fn from(err: MyError) -> PyErr {
-        PyOSError::new_err(err.to_string())
-    }
-}
 
 #[pyclass(subclass, name = "DeviceDetector", module = "py_device_detector")]
 #[derive(Clone)]
@@ -46,13 +27,11 @@ impl PyDeviceDetector {
 
     #[pyo3(signature = (ua, headers=None))]
     fn parse(&self, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<String> {
-        match self.dd.parse(ua, headers) {
-            Ok(Detection::Bot(_bot)) => Ok("Bot".to_string()),
-            Ok(Detection::Known(_device)) => Ok("Device".to_string()),
-            Err(_error) => Err(PyErr::from(MyError {
-                msg: "number is less than or equal to 2",
-            })),
-        }
+        let result = match self.dd.parse(ua, headers)? {
+            Detection::Bot(bot) => std::format!("{:?}", bot).to_string(),
+            Detection::Known(device) => std::format!("{:?}", device).to_string(),
+        };
+        Ok(result)
     }
 }
 

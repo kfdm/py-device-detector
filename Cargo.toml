@@ -10,4 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 rust-device-detector = { git = "https://github.com/simplecastapps/rust-device-detector.git", branch = "main", features = ["cache"]}
-pyo3 = "0.22.0"
+pyo3 = { version = "0.22.0", features = ["anyhow"] }
