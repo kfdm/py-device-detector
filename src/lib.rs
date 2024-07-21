@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyDict};
 use rust_device_detector::device_detector::{Detection, DeviceDetector};
 
 #[pyclass(subclass, name = "DeviceDetector", module = "py_device_detector")]
@@ -28,16 +26,11 @@ impl PyDeviceDetector {
     }
 
     #[pyo3(signature = (ua, headers=None))]
-    fn parse(
-        &self,
-        ua: &str,
-        headers: Option<Vec<(String, String)>>,
-    ) -> PyResult<HashMap<String, String>> {
-        let result = match self.dd.parse(ua, headers)? {
+    fn parse(&self, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<PyObject> {
+        match self.dd.parse(ua, headers)? {
             Detection::Bot(bot) => PyBot(bot).to_hashmap(),
             Detection::Known(device) => PyDevice(device).to_hashmap(),
-        };
-        Ok(result)
+        }
     }
 }
 
@@ -46,17 +39,30 @@ impl PyDeviceDetector {
 pub struct PyBot(rust_device_detector::device_detector::Bot);
 
 impl PyBot {
-    fn to_hashmap(&self) -> HashMap<String, String> {
-        let mut data = HashMap::new();
-        data.insert("name".to_string(), self.0.name.clone());
-        if let Some(category) = self.0.category.clone() {
-            data.insert("category".to_string(), category);
-        }
-        if let Some(url) = self.0.url.clone() {
-            data.insert("url".to_string(), url);
-        }
+    fn to_hashmap(&self) -> PyResult<PyObject> {
+        Python::with_gil(|py| -> PyResult<PyObject> {
+            let dict = PyDict::new_bound(py);
+            dict.set_item("name", self.0.name.clone());
+            if let Some(category) = self.0.category.clone() {
+                dict.set_item("category", category);
+            }
+            if let Some(url) = self.0.url.clone() {
+                dict.set_item("url", url);
+            }
+            // Decode BotProducer
+            if let Some(producer) = self.0.producer.clone() {
+                let inner = PyDict::new_bound(py);
+                if let Some(name) = producer.name {
+                    inner.set_item("name", name);
+                }
+                if let Some(url) = producer.url {
+                    inner.set_item("url", url);
+                }
 
-        data
+                dict.set_item("producer", inner);
+            }
+            dict.as_any().extract()
+        })
     }
 }
 
@@ -65,39 +71,61 @@ impl PyBot {
 pub struct PyDevice(rust_device_detector::device_detector::KnownDevice);
 
 impl PyDevice {
-    fn to_hashmap(&self) -> HashMap<String, String> {
-        let mut data = HashMap::new();
-        if let Some(client) = self.0.client.clone() {
-            data.insert(
-                "client".to_string(),
-                std::format!("{:?}", client).to_string(),
-            );
-        }
-        if let Some(device) = self.0.device.clone() {
-            data.insert(
-                "device".to_string(),
-                std::format!("{:?}", device).to_string(),
-            );
-        }
-        if let Some(os) = self.0.os.clone() {
-            let mut inner = HashMap::new();
-            if let Some(family) = os.family {
-                inner.insert("family".to_string(), family);
+    fn to_hashmap(&self) -> PyResult<PyObject> {
+        Python::with_gil(|py| -> PyResult<PyObject> {
+            let dict = PyDict::new_bound(py);
+            // Decode Client
+            if let Some(client) = self.0.client.clone() {
+                let inner = PyDict::new_bound(py);
+
+                inner.set_item("name", client.name);
+                inner.set_item("type", client.r#type.as_str());
+
+                if let Some(version) = client.version {
+                    inner.set_item("version", version);
+                }
+                if let Some(engine) = client.engine {
+                    inner.set_item("engine", engine);
+                }
+                if let Some(engine_version) = client.engine_version {
+                    inner.set_item("engine_version", engine_version);
+                }
+
+                dict.set_item("client", inner);
             }
-            // data.insert("os".to_string(),inner );
-        }
-        data
+            // Decode Device
+            if let Some(device) = self.0.device.clone() {
+                let inner = PyDict::new_bound(py);
+                if let Some(brand) = device.brand {
+                    inner.set_item("brand", brand);
+                }
+                if let Some(model) = device.model {
+                    inner.set_item("model", model);
+                }
+                dict.set_item("device", inner);
+            }
+            // Decode OS
+            if let Some(os) = self.0.os.clone() {
+                let inner = PyDict::new_bound(py);
+                inner.set_item("name", os.name);
+                if let Some(family) = os.family {
+                    inner.set_item("family", family);
+                }
+                if let Some(platform) = os.platform {
+                    inner.set_item("platform", platform);
+                }
+
+                dict.set_item("os", inner);
+            }
+            dict.as_any().extract()
+        })
     }
 }
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
 #[pyo3(signature = (ua, headers=None))]
-fn parse(
-    _py: Python,
-    ua: &str,
-    headers: Option<Vec<(String, String)>>,
-) -> PyResult<HashMap<String, String>> {
+fn parse(_py: Python, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<PyObject> {
     PyDeviceDetector::new(0).parse(ua, headers)
 }
 
