@@ -29,8 +29,8 @@ impl PyDeviceDetector {
     fn parse(&self, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<PyObject> {
         Python::with_gil(|py| -> PyResult<PyObject> {
             match self.dd.parse(ua, headers)? {
-                Detection::Bot(bot) => PyBot(bot).to_hashmap(py),
-                Detection::Known(device) => PyDevice(device).to_hashmap(py),
+                Detection::Bot(bot) => PyBot(bot).to_object(py),
+                Detection::Known(device) => PyDevice(device).to_object(py),
             }
         })
     }
@@ -48,17 +48,17 @@ fn set_optional(dict: &Bound<PyDict>, key: &str, optional: &Option<String>) -> R
 pub struct PyBot(rust_device_detector::device_detector::Bot);
 
 impl PyBot {
-    fn to_hashmap(&self, py: Python) -> PyResult<PyObject> {
+    fn to_object(&self, py: Python) -> PyResult<PyObject> {
         let dict = PyDict::new_bound(py);
-        dict.set_item("name", self.0.name.clone());
-        set_optional(&dict, "category", &self.0.category);
-        set_optional(&dict, "url", &self.0.url);
+        dict.set_item("name", self.0.name.clone())?;
+        set_optional(&dict, "category", &self.0.category)?;
+        set_optional(&dict, "url", &self.0.url)?;
         // Decode BotProducer
         if let Some(producer) = self.0.producer.clone() {
             let inner = PyDict::new_bound(py);
-            set_optional(&inner, "name", &producer.name);
-            set_optional(&inner, "url", &producer.url);
-            dict.set_item("producer", inner);
+            set_optional(&inner, "name", &producer.name)?;
+            set_optional(&inner, "url", &producer.url)?;
+            dict.set_item("producer", inner)?;
         }
         dict.as_any().extract()
     }
@@ -69,37 +69,37 @@ impl PyBot {
 pub struct PyDevice(rust_device_detector::device_detector::KnownDevice);
 
 impl PyDevice {
-    fn to_hashmap(&self, py: Python) -> PyResult<PyObject> {
+    fn to_object(&self, py: Python) -> PyResult<PyObject> {
         let dict = PyDict::new_bound(py);
         // Decode Client
         if let Some(client) = self.0.client.clone() {
             let inner = PyDict::new_bound(py);
 
-            inner.set_item("name", client.name);
-            inner.set_item("type", client.r#type.as_str());
-            set_optional(&inner, "version", &client.version);
-            set_optional(&inner, "engine", &client.engine);
-            set_optional(&inner, "engine_version", &client.engine_version);
+            inner.set_item("name", client.name)?;
+            inner.set_item("type", client.r#type.as_str())?;
+            set_optional(&inner, "version", &client.version)?;
+            set_optional(&inner, "engine", &client.engine)?;
+            set_optional(&inner, "engine_version", &client.engine_version)?;
 
-            dict.set_item("client", inner);
+            dict.set_item("client", inner)?;
         }
         // Decode Device
         if let Some(device) = self.0.device.clone() {
             let inner = PyDict::new_bound(py);
 
-            set_optional(&inner, "brand", &device.brand);
-            set_optional(&inner, "model", &device.model);
+            set_optional(&inner, "brand", &device.brand)?;
+            set_optional(&inner, "model", &device.model)?;
 
-            dict.set_item("device", inner);
+            dict.set_item("device", inner)?;
         }
         // Decode OS
         if let Some(os) = self.0.os.clone() {
             let inner = PyDict::new_bound(py);
-            inner.set_item("name", os.name);
-            set_optional(&inner, "family", &os.family);
-            set_optional(&inner, "platform", &os.platform);
+            inner.set_item("name", os.name)?;
+            set_optional(&inner, "family", &os.family)?;
+            set_optional(&inner, "platform", &os.platform)?;
 
-            dict.set_item("os", inner);
+            dict.set_item("os", inner)?;
         }
         dict.as_any().extract()
     }
