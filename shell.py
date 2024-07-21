@@ -1,6 +1,7 @@
 import py_device_detector
 import code
 import datetime
+from pprint import pformat
 
 print("Creating dd")
 dd = py_device_detector.DeviceDetector(128)
@@ -12,7 +13,7 @@ def test(ua):
     start = datetime.datetime.now()
     result = dd.parse(ua)
     end = datetime.datetime.now()
-    print("Result :: ", result)
+    print("Result :: ", pformat(result))
     print("Time   :: ", end - start)
     print('*'*80)
 
