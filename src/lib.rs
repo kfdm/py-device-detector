@@ -5,15 +5,11 @@ mod internal;
 
 #[pyclass(subclass, name = "DeviceDetector", module = "py_device_detector")]
 #[derive(Clone)]
-pub struct PyDeviceDetector {
-    dd: DeviceDetector,
-}
+pub struct PyDeviceDetector(DeviceDetector);
 
 impl PyDeviceDetector {
     pub fn create(py: Python, entries: u64) -> PyResult<PyObject> {
-        let pdd = PyDeviceDetector {
-            dd: DeviceDetector::new_with_cache(entries),
-        };
+        let pdd = PyDeviceDetector(DeviceDetector::new_with_cache(entries));
         Ok(Py::new(py, pdd)?.into_py(py))
     }
 }
@@ -22,15 +18,13 @@ impl PyDeviceDetector {
 impl PyDeviceDetector {
     #[new]
     pub fn new(entries: u64) -> Self {
-        PyDeviceDetector {
-            dd: DeviceDetector::new_with_cache(entries),
-        }
+        PyDeviceDetector(DeviceDetector::new_with_cache(entries))
     }
 
     #[pyo3(signature = (ua, headers=None))]
     fn parse(&self, ua: &str, headers: Option<Vec<(String, String)>>) -> PyResult<PyObject> {
         Python::with_gil(|py| -> PyResult<PyObject> {
-            match self.dd.parse(ua, headers)? {
+            match self.0.parse(ua, headers)? {
                 Detection::Bot(bot) => internal::BotWrapper(bot).to_object(py),
                 Detection::Known(device) => internal::DeviceWrapper(device).to_object(py),
             }
