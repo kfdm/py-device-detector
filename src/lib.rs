@@ -34,6 +34,13 @@ impl PyDeviceDetector {
     }
 }
 
+fn set_optional(dict: &Bound<PyDict>, key: &str, optional: &Option<String>) -> Result<(), PyErr> {
+    match optional {
+        Some(value) => dict.set_item(key, value),
+        None => Ok(()),
+    }
+}
+
 #[pyclass(subclass, name = "Bot", module = "py_device_detector")]
 #[derive(Clone, Debug)]
 pub struct PyBot(rust_device_detector::device_detector::Bot);
@@ -43,22 +50,13 @@ impl PyBot {
         Python::with_gil(|py| -> PyResult<PyObject> {
             let dict = PyDict::new_bound(py);
             dict.set_item("name", self.0.name.clone());
-            if let Some(category) = self.0.category.clone() {
-                dict.set_item("category", category);
-            }
-            if let Some(url) = self.0.url.clone() {
-                dict.set_item("url", url);
-            }
+            set_optional(&dict, "category", &self.0.category);
+            set_optional(&dict, "url", &self.0.url);
             // Decode BotProducer
             if let Some(producer) = self.0.producer.clone() {
                 let inner = PyDict::new_bound(py);
-                if let Some(name) = producer.name {
-                    inner.set_item("name", name);
-                }
-                if let Some(url) = producer.url {
-                    inner.set_item("url", url);
-                }
-
+                set_optional(&inner, "name", &producer.name);
+                set_optional(&inner, "url", &producer.url);
                 dict.set_item("producer", inner);
             }
             dict.as_any().extract()
@@ -80,40 +78,27 @@ impl PyDevice {
 
                 inner.set_item("name", client.name);
                 inner.set_item("type", client.r#type.as_str());
-
-                if let Some(version) = client.version {
-                    inner.set_item("version", version);
-                }
-                if let Some(engine) = client.engine {
-                    inner.set_item("engine", engine);
-                }
-                if let Some(engine_version) = client.engine_version {
-                    inner.set_item("engine_version", engine_version);
-                }
+                set_optional(&inner, "version", &client.version);
+                set_optional(&inner, "engine", &client.engine);
+                set_optional(&inner, "engine_version", &client.engine_version);
 
                 dict.set_item("client", inner);
             }
             // Decode Device
             if let Some(device) = self.0.device.clone() {
                 let inner = PyDict::new_bound(py);
-                if let Some(brand) = device.brand {
-                    inner.set_item("brand", brand);
-                }
-                if let Some(model) = device.model {
-                    inner.set_item("model", model);
-                }
+
+                set_optional(&inner, "brand", &device.brand);
+                set_optional(&inner, "model", &device.model);
+
                 dict.set_item("device", inner);
             }
             // Decode OS
             if let Some(os) = self.0.os.clone() {
                 let inner = PyDict::new_bound(py);
                 inner.set_item("name", os.name);
-                if let Some(family) = os.family {
-                    inner.set_item("family", family);
-                }
-                if let Some(platform) = os.platform {
-                    inner.set_item("platform", platform);
-                }
+                set_optional(&inner, "family", &os.family);
+                set_optional(&inner, "platform", &os.platform);
 
                 dict.set_item("os", inner);
             }
